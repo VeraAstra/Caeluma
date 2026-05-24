@@ -2,16 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Pokémon Type Puzzle Helper</title>
+  <title>Poké Helper</title>
 
   <style>
     body {
+      margin: 0;
       font-family: Arial, sans-serif;
       background: #121212;
       color: #f2f2f2;
-      padding: 30px;
-      margin: 0;
     }
+
     .navbar {
       background: #1f1f1f;
       padding: 15px 30px;
@@ -48,7 +48,7 @@
     main {
       padding: 30px;
     }
-    
+
     h1 {
       text-align: center;
       color: #ffffff;
@@ -201,7 +201,17 @@
     }
 
     @media (max-width: 900px) {
-      body {
+      .navbar {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .menu {
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+
+      main {
         padding: 18px;
       }
 
@@ -217,69 +227,70 @@
       .type-display {
         grid-template-columns: 24px 90px;
       }
-      
     }
   </style>
 </head>
 
 <body>
-  <h1>Pokémon Type Puzzle Helper</h1>
-<nav class="navbar">
+  <nav class="navbar">
     <a href="https://veraastra.github.io/Caeluma/index.html" class="logo">Caeluma</a>
 
     <ul class="menu">
       <li><a href="https://veraastra.github.io/Caeluma/index.html">Home</a></li>
-      <li><a href="https://veraastra.github.io/Caeluma/pkmn.html">PKMN Helper</a></li>
+      <li><a href="https://veraastra.github.io/Caeluma/pkmn.html">Poké Helper</a></li>
       <li><a href="#">WIP</a></li>
-      <li><a href="#">WIP pt 2</a></li
+      <li><a href="#">WIP pt 2</a></li>
 
-      <!-- Add more menu items here later -->
-      <!-- Example: <li><a href="#">About</a></li> -->
     </ul>
   </nav>
-  <div class="layout">
-    <section class="panel">
-      <h2>Type Filters</h2>
-      <p class="small-note">
-        Use Exclude for impossible types. Use Must Include for types the Pokémon definitely has.
-        Mono can be selected if the Pokémon is single-type.
-      </p>
 
-      <table class="type-table">
-        <thead>
-          <tr>
-            <th>Exclude</th>
-            <th>Type</th>
-            <th>Must Include</th>
-          </tr>
-        </thead>
+  <main>
+    <h1>Poké Helper</h1>
 
-        <tbody id="typeTableBody"></tbody>
-      </table>
+    <div class="layout">
+      <section class="panel">
+        <h2>Type Filters</h2>
+        <p class="small-note">
+          Use Exclude for impossible types. Use Must Include for types the Pokémon definitely has.
+          Mono can be selected if the Pokémon is single-type.
+        </p>
 
-      <div class="controls">
-        <button id="resetExcludedButton">Reset Excluded</button>
-        <button id="resetRequiredButton">Reset Required</button>
-        <button id="resetAllButton">Reset Everything</button>
-      </div>
-    </section>
+        <table class="type-table">
+          <thead>
+            <tr>
+              <th>Exclude</th>
+              <th>Type</th>
+              <th>Must Include</th>
+            </tr>
+          </thead>
 
-    <section class="panel">
-      <div class="results-section">
-        <h2>Possible Type Combinations</h2>
-        <p id="comboCount" class="count"></p>
+          <tbody id="typeTableBody"></tbody>
+        </table>
 
-        <ul id="comboList" class="combo-list"></ul>
-      </div>
+        <div class="controls">
+          <button id="resetExcludedButton">Reset Excluded</button>
+          <button id="resetRequiredButton">Reset Required</button>
+          <button id="resetAllButton">Reset All</button>
+        </div>
+      </section>
 
-      <div class="results-section">
-        <h2>Remaining Choices</h2>
-        <p id="remainingCount" class="count"></p>
+      <section class="panel">
+        <div class="results-section">
+          <h2>Possible Type Combinations</h2>
+          <p id="comboCount" class="count"></p>
 
-        <ul id="remainingList" class="remaining-list"></ul>
-      </div>
-    </section>
-  </div>
+          <ul id="comboList" class="combo-list"></ul>
+        </div>
+
+        <div class="results-section">
+          <h2>Remaining Choices</h2>
+          <p id="remainingCount" class="count"></p>
+
+          <ul id="remainingList" class="remaining-list"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
 
   <script>
     const pokemonTypes = [
@@ -308,44 +319,26 @@
       ...pokemonTypes
     ];
 
-    /*
-      Update these paths to match your actual icon folder/file names.
-
-      Example:
-      If your HTML file and icons folder are in the same directory:
-
-      pokemon-puzzle-helper.html
-      icons/
-        normal.png
-        fire.png
-        mono.png
-
-      then use:
-      "Normal": "icons/normal.png"
-
-      If your folder is named type-icons instead, use:
-      "Normal": "type-icons/normal.png"
-    */
     const iconPaths = {
-        "Mono": "icons/Mono_icon_SV.png",
-  "Normal": "icons/Normal_icon_SV.png",
-  "Fire": "icons/Fire_icon_SV.png",
-  "Water": "icons/Water_icon_SV.png",
-  "Electric": "icons/Electric_icon_SV.png",
-  "Grass": "icons/Grass_icon_SV.png",
-  "Ice": "icons/Ice_icon_SV.png",
-  "Fighting": "icons/Fighting_icon_SV.png",
-  "Poison": "icons/Poison_icon_SV.png",
-  "Ground": "icons/Ground_icon_SV.png",
-  "Flying": "icons/Flying_icon_SV.png",
-  "Psychic": "icons/Psychic_icon_SV.png",
-  "Bug": "icons/Bug_icon_SV.png",
-  "Rock": "icons/Rock_icon_SV.png",
-  "Ghost": "icons/Ghost_icon_SV.png",
-  "Dragon": "icons/Dragon_icon_SV.png",
-  "Dark": "icons/Dark_icon_SV.png",
-  "Steel": "icons/Steel_icon_SV.png",
-  "Fairy": "icons/Fairy_icon_SV.png"
+      "Mono": "icons/Mono_icon_SV.png",
+      "Normal": "icons/Normal_icon_SV.png",
+      "Fire": "icons/Fire_icon_SV.png",
+      "Water": "icons/Water_icon_SV.png",
+      "Electric": "icons/Electric_icon_SV.png",
+      "Grass": "icons/Grass_icon_SV.png",
+      "Ice": "icons/Ice_icon_SV.png",
+      "Fighting": "icons/Fighting_icon_SV.png",
+      "Poison": "icons/Poison_icon_SV.png",
+      "Ground": "icons/Ground_icon_SV.png",
+      "Flying": "icons/Flying_icon_SV.png",
+      "Psychic": "icons/Psychic_icon_SV.png",
+      "Bug": "icons/Bug_icon_SV.png",
+      "Rock": "icons/Rock_icon_SV.png",
+      "Ghost": "icons/Ghost_icon_SV.png",
+      "Dragon": "icons/Dragon_icon_SV.png",
+      "Dark": "icons/Dark_icon_SV.png",
+      "Steel": "icons/Steel_icon_SV.png",
+      "Fairy": "icons/Fairy_icon_SV.png"
     };
 
     const excludedOptions = [];
