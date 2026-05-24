@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pokémon Type Puzzle Helper</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f2f2f2;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ffffff;
+    }
+
+    h2 {
+      color: #ffffff;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .type-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s, opacity 0.2s;
+    }
+
+    .type-option:hover {
+      background: #333333;
+    }
+
+    .type-option.eliminated {
+      color: #777;
+      text-decoration: line-through;
+      opacity: 0.65;
+      background: #181818;
+    }
+
+    input[type="checkbox"] {
+      accent-color: #7dd3fc;
+      cursor: pointer;
+    }
+
+    .remaining-list,
+    .combo-list {
+      padding-left: 20px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .remaining-list li,
+    .combo-list li {
+      margin-bottom: 6px;
+    }
+
+    .count {
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-top: -8px;
+      margin-bottom: 14px;
+    }
+
+    button {
+      margin-top: 16px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #7dd3fc;
+      color: #121212;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #38bdf8;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Pokémon Type Puzzle Helper</h1>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Eliminate Types</h2>
+
+      <div id="typeGrid" class="type-grid"></div>
+
+      <button id="resetButton">Reset</button>
+    </section>
+
+    <section class="panel">
+      <h2>Remaining Choices</h2>
+      <p id="remainingCount" class="count"></p>
+
+      <ul id="remainingList" class="remaining-list"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>Possible Type Combinations</h2>
+      <p id="comboCount" class="count"></p>
+
+      <ul id="comboList" class="combo-list"></ul>
+    </section>
+  </div>
+
+  <script>
+    const pokemonTypes = [
+      "Normal",
+      "Fire",
+      "Water",
+      "Electric",
+      "Grass",
+      "Ice",
+      "Fighting",
+      "Poison",
+      "Ground",
+      "Flying",
+      "Psychic",
+      "Bug",
+      "Rock",
+      "Ghost",
+      "Dragon",
+      "Dark",
+      "Steel",
+      "Fairy"
+    ];
+
+    const eliminatedTypes = [];
+
+    const typeGrid = document.getElementById("typeGrid");
+    const remainingList = document.getElementById("remainingList");
+    const comboList = document.getElementById("comboList");
+    const remainingCount = document.getElementById("remainingCount");
+    const comboCount = document.getElementById("comboCount");
+    const resetButton = document.getElementById("resetButton");
+
+    function buildTypeCheckboxes() {
+      typeGrid.innerHTML = "";
+
+      pokemonTypes.forEach(function(type) {
+        const label = document.createElement("label");
+        label.className = "type-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = type;
+
+        const span = document.createElement("span");
+        span.textContent = type;
+
+        checkbox.addEventListener("change", function() {
+          if (checkbox.checked) {
+            eliminatedTypes.push(type);
+            label.classList.add("eliminated");
+          } else {
+            const index = eliminatedTypes.indexOf(type);
+
+            if (index !== -1) {
+              eliminatedTypes.splice(index, 1);
+            }
+
+            label.classList.remove("eliminated");
+          }
+
+          updateDisplay();
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(span);
+
+        typeGrid.appendChild(label);
+      });
+    }
+
+    function getRemainingTypes() {
+      return pokemonTypes.filter(function(type) {
+        return !eliminatedTypes.includes(type);
+      });
+    }
+
+    function getTypeCombinations(remainingTypes) {
+      const combinations = [];
+
+      for (let i = 0; i < remainingTypes.length; i++) {
+        for (let j = i + 1; j < remainingTypes.length; j++) {
+          combinations.push(remainingTypes[i] + " / " + remainingTypes[j]);
+        }
+      }
+
+      return combinations;
+    }
+
+    function updateDisplay() {
+      const remainingTypes = getRemainingTypes();
+      const combinations = getTypeCombinations(remainingTypes);
+
+      remainingList.innerHTML = "";
+      comboList.innerHTML = "";
+
+      remainingCount.textContent = remainingTypes.length + " type(s) remaining";
+      comboCount.textContent = combinations.length + " combination(s) possible";
+
+      remainingTypes.forEach(function(type) {
+        const listItem = document.createElement("li");
+        listItem.textContent = type;
+        remainingList.appendChild(listItem);
+      });
+
+      combinations.forEach(function(combo) {
+        const listItem = document.createElement("li");
+        listItem.textContent = combo;
+        comboList.appendChild(listItem);
+      });
+
+      if (remainingTypes.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No types left.";
+        remainingList.appendChild(listItem);
+      }
+
+      if (combinations.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No combinations left.";
+        comboList.appendChild(listItem);
+      }
+    }
+
+    resetButton.addEventListener("click", function() {
+      eliminatedTypes.length = 0;
+
+      const checkboxes = document.querySelectorAll("input[type='checkbox']");
+      const labels = document.querySelectorAll(".type-option");
+
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
+      });
+
+      labels.forEach(function(label) {
+        label.classList.remove("eliminated");
+      });
+
+      updateDisplay();
+    });
+
+    buildTypeCheckboxes();
+    updateDisplay();
+  </script>
+</body>
+</html>
