@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pokémon Type Puzzle Helper</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f2f2f2;
+      padding: 30px;
+      margin: 0;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ffffff;
+      margin-bottom: 30px;
+    }
+
+    h2 {
+      color: #ffffff;
+      margin-top: 0;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .small-note {
+      color: #aaa;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      margin-top: -8px;
+      margin-bottom: 16px;
+    }
+
+    .type-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .type-table th,
+    .type-table td {
+      padding: 10px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+
+    .type-table th:first-child,
+    .type-table td:first-child {
+      text-align: left;
+    }
+
+    .type-table th {
+      color: #ffffff;
+      background: #252525;
+      font-size: 0.95rem;
+    }
+
+    .type-table tr {
+      background: #1e1e1e;
+      transition: background 0.2s;
+    }
+
+    .type-table tr:hover {
+      background: #2a2a2a;
+    }
+
+    .type-name {
+      font-weight: bold;
+    }
+
+    .eliminated-row .type-name {
+      color: #777;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
+    .required-row .type-name {
+      color: #7dd3fc;
+    }
+
+    input[type="checkbox"] {
+      accent-color: #7dd3fc;
+      cursor: pointer;
+      transform: scale(1.15);
+    }
+
+    .results-section {
+      margin-bottom: 28px;
+    }
+
+    .count {
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-top: -8px;
+      margin-bottom: 14px;
+    }
+
+    .combo-list,
+    .remaining-list {
+      padding-left: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #181818;
+      padding-top: 12px;
+      padding-bottom: 12px;
+    }
+
+    .combo-list li,
+    .remaining-list li {
+      margin-bottom: 6px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    button {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #7dd3fc;
+      color: #121212;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #38bdf8;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 18px;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .type-table th,
+      .type-table td {
+        padding: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Pokémon Type Puzzle Helper</h1>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Type Filters</h2>
+      <p class="small-note">
+        Use Exclude for impossible types. Use Must Include for types the Pokémon definitely has.
+      </p>
+
+      <table class="type-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Exclude</th>
+            <th>Must Include</th>
+          </tr>
+        </thead>
+
+        <tbody id="typeTableBody"></tbody>
+      </table>
+
+      <div class="controls">
+        <button id="resetExcludedButton">Reset Excluded</button>
+        <button id="resetRequiredButton">Reset Required</button>
+        <button id="resetAllButton">Reset Everything</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="results-section">
+        <h2>Possible Type Combinations</h2>
+        <p id="comboCount" class="count"></p>
+
+        <ul id="comboList" class="combo-list"></ul>
+      </div>
+
+      <div class="results-section">
+        <h2>Remaining Choices</h2>
+        <p id="remainingCount" class="count"></p>
+
+        <ul id="remainingList" class="remaining-list"></ul>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const pokemonTypes = [
+      "Normal",
+      "Fire",
+      "Water",
+      "Electric",
+      "Grass",
+      "Ice",
+      "Fighting",
+      "Poison",
+      "Ground",
+      "Flying",
+      "Psychic",
+      "Bug",
+      "Rock",
+      "Ghost",
+      "Dragon",
+      "Dark",
+      "Steel",
+      "Fairy"
+    ];
+
+    const excludedTypes = [];
+    const requiredTypes = [];
+
+    const typeTableBody = document.getElementById("typeTableBody");
+    const comboList = document.getElementById("comboList");
+    const remainingList = document.getElementById("remainingList");
+    const comboCount = document.getElementById("comboCount");
+    const remainingCount = document.getElementById("remainingCount");
+
+    const resetExcludedButton = document.getElementById("resetExcludedButton");
+    const resetRequiredButton = document.getElementById("resetRequiredButton");
+    const resetAllButton = document.getElementById("resetAllButton");
+
+    function buildTypeTable() {
+      typeTableBody.innerHTML = "";
+
+      pokemonTypes.forEach(function(type) {
+        const row = document.createElement("tr");
+
+        const typeCell = document.createElement("td");
+        typeCell.textContent = type;
+        typeCell.className = "type-name";
+
+        const excludeCell = document.createElement("td");
+        const excludeCheckbox = document.createElement("input");
+        excludeCheckbox.type = "checkbox";
+        excludeCheckbox.value = type;
+        excludeCheckbox.dataset.type = type;
+        excludeCheckbox.className = "exclude-checkbox";
+
+        const requiredCell = document.createElement("td");
+        const requiredCheckbox = document.createElement("input");
+        requiredCheckbox.type = "checkbox";
+        requiredCheckbox.value = type;
+        requiredCheckbox.dataset.type = type;
+        requiredCheckbox.className = "required-checkbox";
+
+        excludeCheckbox.addEventListener("change", function() {
+          if (excludeCheckbox.checked) {
+            addToArray(excludedTypes, type);
+            row.classList.add("eliminated-row");
+
+            requiredCheckbox.checked = false;
+            removeFromArray(requiredTypes, type);
+            row.classList.remove("required-row");
+          } else {
+            removeFromArray(excludedTypes, type);
+            row.classList.remove("eliminated-row");
+          }
+
+          updateDisplay();
+        });
+
+        requiredCheckbox.addEventListener("change", function() {
+          if (requiredCheckbox.checked) {
+            addToArray(requiredTypes, type);
+            row.classList.add("required-row");
+
+            excludeCheckbox.checked = false;
+            removeFromArray(excludedTypes, type);
+            row.classList.remove("eliminated-row");
+          } else {
+            removeFromArray(requiredTypes, type);
+            row.classList.remove("required-row");
+          }
+
+          updateDisplay();
+        });
+
+        excludeCell.appendChild(excludeCheckbox);
+        requiredCell.appendChild(requiredCheckbox);
+
+        row.appendChild(typeCell);
+        row.appendChild(excludeCell);
+        row.appendChild(requiredCell);
+
+        typeTableBody.appendChild(row);
+      });
+    }
+
+    function addToArray(array, value) {
+      if (!array.includes(value)) {
+        array.push(value);
+      }
+    }
+
+    function removeFromArray(array, value) {
+      const index = array.indexOf(value);
+
+      if (index !== -1) {
+        array.splice(index, 1);
+      }
+    }
+
+    function getRemainingTypes() {
+      return pokemonTypes.filter(function(type) {
+        return !excludedTypes.includes(type);
+      });
+    }
+
+    function getTypeCombinations(remainingTypes) {
+      const combinations = [];
+
+      for (let i = 0; i < remainingTypes.length; i++) {
+        for (let j = i + 1; j < remainingTypes.length; j++) {
+          const firstType = remainingTypes[i];
+          const secondType = remainingTypes[j];
+
+          const includesEveryRequiredType = requiredTypes.every(function(requiredType) {
+            return firstType === requiredType || secondType === requiredType;
+          });
+
+          if (includesEveryRequiredType) {
+            combinations.push(firstType + " / " + secondType);
+          }
+        }
+      }
+
+      return combinations;
+    }
+
+    function updateDisplay() {
+      const remainingTypes = getRemainingTypes();
+      const combinations = getTypeCombinations(remainingTypes);
+
+      comboList.innerHTML = "";
+      remainingList.innerHTML = "";
+
+      comboCount.textContent = combinations.length + " combination(s) possible";
+      remainingCount.textContent = remainingTypes.length + " type(s) remaining";
+
+      combinations.forEach(function(combo) {
+        const listItem = document.createElement("li");
+        listItem.textContent = combo;
+        comboList.appendChild(listItem);
+      });
+
+      remainingTypes.forEach(function(type) {
+        const listItem = document.createElement("li");
+        listItem.textContent = type;
+        remainingList.appendChild(listItem);
+      });
+
+      if (combinations.length === 0) {
+        const listItem = document.createElement("li");
+
+        if (requiredTypes.length > 2) {
+          listItem.textContent = "No combinations left. A Pokémon can only have up to two types.";
+        } else {
+          listItem.textContent = "No combinations left.";
+        }
+
+        comboList.appendChild(listItem);
+      }
+
+      if (remainingTypes.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No types left.";
+        remainingList.appendChild(listItem);
+      }
+    }
+
+    function resetExcluded() {
+      excludedTypes.length = 0;
+
+      const checkboxes = document.querySelectorAll(".exclude-checkbox");
+
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
+        checkbox.closest("tr").classList.remove("eliminated-row");
+      });
+
+      updateDisplay();
+    }
+
+    function resetRequired() {
+      requiredTypes.length = 0;
+
+      const checkboxes = document.querySelectorAll(".required-checkbox");
+
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = false;
+        checkbox.closest("tr").classList.remove("required-row");
+      });
+
+      updateDisplay();
+    }
+
+    function resetAll() {
+      resetExcluded();
+      resetRequired();
+      updateDisplay();
+    }
+
+    resetExcludedButton.addEventListener("click", resetExcluded);
+    resetRequiredButton.addEventListener("click", resetRequired);
+    resetAllButton.addEventListener("click", resetAll);
+
+    buildTypeTable();
+    updateDisplay();
+  </script>
+</body>
+</html>
