@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pokémon Type Puzzle Helper</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #121212;
+      color: #f2f2f2;
+      padding: 30px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ffffff;
+    }
+
+    h2 {
+      color: #ffffff;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .panel {
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .wide-panel {
+      grid-column: span 2;
+    }
+
+    .type-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .type-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      cursor: pointer;
+    }
+
+    .type-option:hover {
+      background: #333333;
+    }
+
+    .type-option.eliminated {
+      color: #777;
+      text-decoration: line-through;
+      opacity: 0.65;
+      background: #181818;
+    }
+
+    .type-option.required {
+      color: #121212;
+      background: #7dd3fc;
+      border-color: #38bdf8;
+    }
+
+    input[type="checkbox"] {
+      accent-color: #7dd3fc;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    .remaining-list,
+    .combo-list,
+    .pokemon-list {
+      padding-left: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .remaining-list li,
+    .combo-list li,
+    .pokemon-list li {
+      margin-bottom: 6px;
+    }
+
+    .count {
+      color: #aaa;
+      font-size: 0.9rem;
+      margin-top: -8px;
+      margin-bottom: 14px;
+    }
+
+    button {
+      margin-top: 16px;
+      padding: 8px 14px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #7dd3fc;
+      color: #121212;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #38bdf8;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .wide-panel {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Pokémon Type Puzzle Helper</h1>
+
+  <div class="layout">
+    <section class="panel">
+      <h2>Upload Pokémon File</h2>
+      <p class="count">CSV format: Name, Type1, Type2</p>
+
+      <input type="file" id="pokemonFile" accept=".csv" />
+
+      <p id="fileStatus" class="count">No file uploaded yet.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Eliminate Types</h2>
+      <p class="count">Checked types are removed from the answer pool.</p>
+
+      <div id="eliminateTypeGrid" class="type-grid"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Must Include Types</h2>
+      <p class="count">Checked types must appear in the answer.</p>
+
+      <div id="requiredTypeGrid" class="type-grid"></div>
+
+      <button id="resetButton">Reset All</button>
+    </section>
+
+    <section class="panel">
+      <h2>Remaining Choices</h2>
+      <p id="remainingCount" class="count"></p>
+
+      <ul id="remainingList" class="remaining-list"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>Possible Type Combinations</h2>
+      <p id="comboCount" class="count"></p>
+
+      <ul id="comboList" class="combo-list"></ul>
+    </section>
+
+    <section class="panel wide-panel">
+      <h2>Matching Pokémon</h2>
+      <p id="pokemonCount" class="count"></p>
+
+      <ul id="pokemonList" class="pokemon-list"></ul>
+    </section>
+  </div>
+
+  <script>
+    const pokemonTypes = [
+      "Normal",
+      "Fire",
+      "Water",
+      "Electric",
+      "Grass",
+      "Ice",
+      "Fighting",
+      "Poison",
+      "Ground",
+      "Flying",
+      "Psychic",
+      "Bug",
+      "Rock",
+      "Ghost",
+      "Dragon",
+      "Dark",
+      "Steel",
+      "Fairy"
+    ];
+
+    const eliminatedTypes = [];
+    const requiredTypes = [];
+
+    let pokemonData = [];
+
+    const eliminateTypeGrid = document.getElementById("eliminateTypeGrid");
+    const requiredTypeGrid = document.getElementById("requiredTypeGrid");
+
+    const remainingList = document.getElementById("remainingList");
+    const comboList = document.getElementById("comboList");
+    const pokemonList = document.getElementById("pokemonList");
+
+    const remainingCount = document.getElementById("remainingCount");
+    const comboCount = document.getElementById("comboCount");
+    const pokemonCount = document.getElementById("pokemonCount");
+    const fileStatus = document.getElementById("fileStatus");
+
+    const resetButton = document.getElementById("resetButton");
+    const pokemonFile = document.getElementById("pokemonFile");
+
+    function buildEliminateCheckboxes() {
+      eliminateTypeGrid.innerHTML = "";
+
+      pokemonTypes.forEach(function(type) {
+        const label = document.createElement("label");
+        label.className = "type-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = type;
+
+        const span = document.createElement("span");
+        span.textContent = type;
+
+        checkbox.addEventListener("change", function() {
+          if (checkbox.checked) {
+            addToArray(eliminatedTypes, type);
+            label.classList.add("eliminated");
+
+            removeFromArray(requiredTypes, type);
+            refreshCheckboxes();
+          } else {
+            removeFromArray(eliminatedTypes, type);
+            label.classList.remove("eliminated");
+          }
+
+          updateDisplay();
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(span);
+
+        eliminateTypeGrid.appendChild(label);
+      });
+    }
+
+    function buildRequiredCheckboxes() {
+      requiredTypeGrid.innerHTML = "";
+
+      pokemonTypes.forEach(function(type) {
+        const label = document.createElement("label");
+        label.className = "type-option";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = type;
+
+        const span = document.createElement("span");
+        span.textContent = type;
+
+        checkbox.addEventListener("change", function() {
+          if (checkbox.checked) {
+            addToArray(requiredTypes, type);
+            label.classList.add("required");
+
+            removeFromArray(eliminatedTypes, type);
+            refreshCheckboxes();
+          } else {
+            removeFromArray(requiredTypes, type);
+            label.classList.remove("required");
+          }
+
+          updateDisplay();
+        });
+
+        label.appendChild(checkbox);
+        label.appendChild(span);
+
+        requiredTypeGrid.appendChild(label);
+      });
+    }
+
+    function addToArray(array, value) {
+      if (!array.includes(value)) {
+        array.push(value);
+      }
+    }
+
+    function removeFromArray(array, value) {
+      const index = array.indexOf(value);
+
+      if (index !== -1) {
+        array.splice(index, 1);
+      }
+    }
+
+    function refreshCheckboxes() {
+      const eliminateLabels = eliminateTypeGrid.querySelectorAll(".type-option");
+      const requiredLabels = requiredTypeGrid.querySelectorAll(".type-option");
+
+      eliminateLabels.forEach(function(label) {
+        const checkbox = label.querySelector("input");
+        const type = checkbox.value;
+
+        checkbox.checked = eliminatedTypes.includes(type);
+        label.classList.toggle("eliminated", eliminatedTypes.includes(type));
+      });
+
+      requiredLabels.forEach(function(label) {
+        const checkbox = label.querySelector("input");
+        const type = checkbox.value;
+
+        checkbox.checked = requiredTypes.includes(type);
+        label.classList.toggle("required", requiredTypes.includes(type));
+      });
+    }
+
+    function getRemainingTypes() {
+      return pokemonTypes.filter(function(type) {
+        return !eliminatedTypes.includes(type);
+      });
+    }
+
+    function typeSetIncludesRequiredTypes(typeSet) {
+      return requiredTypes.every(function(requiredType) {
+        return typeSet.includes(requiredType);
+      });
+    }
+
+    function getTypeCombinations(remainingTypes) {
+      const combinations = [];
+
+      for (let i = 0; i < remainingTypes.length; i++) {
+        for (let j = i + 1; j < remainingTypes.length; j++) {
+          const typeSet = [remainingTypes[i], remainingTypes[j]];
+
+          if (typeSetIncludesRequiredTypes(typeSet)) {
+            combinations.push(remainingTypes[i] + " / " + remainingTypes[j]);
+          }
+        }
+      }
+
+      return combinations;
+    }
+
+    function getMatchingPokemon(remainingTypes) {
+      return pokemonData.filter(function(pokemon) {
+        const pokemonTypeSet = [pokemon.type1];
+
+        if (pokemon.type2 !== "") {
+          pokemonTypeSet.push(pokemon.type2);
+        }
+
+        const type1IsAllowed = remainingTypes.includes(pokemon.type1);
+        const type2IsAllowed = pokemon.type2 === "" || remainingTypes.includes(pokemon.type2);
+        const includesRequiredTypes = typeSetIncludesRequiredTypes(pokemonTypeSet);
+
+        return type1IsAllowed && type2IsAllowed && includesRequiredTypes;
+      });
+    }
+
+    function updateDisplay() {
+      const remainingTypes = getRemainingTypes();
+      const combinations = getTypeCombinations(remainingTypes);
+      const matchingPokemon = getMatchingPokemon(remainingTypes);
+
+      remainingList.innerHTML = "";
+      comboList.innerHTML = "";
+      pokemonList.innerHTML = "";
+
+      remainingCount.textContent = remainingTypes.length + " type(s) remaining";
+      comboCount.textContent = combinations.length + " combination(s) possible";
+
+      if (pokemonData.length === 0) {
+        pokemonCount.textContent = "Upload a Pokémon CSV file to see matching Pokémon.";
+      } else {
+        pokemonCount.textContent = matchingPokemon.length + " Pokémon match the current filters";
+      }
+
+      remainingTypes.forEach(function(type) {
+        const listItem = document.createElement("li");
+        listItem.textContent = type;
+        remainingList.appendChild(listItem);
+      });
+
+      combinations.forEach(function(combo) {
+        const listItem = document.createElement("li");
+        listItem.textContent = combo;
+        comboList.appendChild(listItem);
+      });
+
+      matchingPokemon.forEach(function(pokemon) {
+        const listItem = document.createElement("li");
+
+        if (pokemon.type2 === "") {
+          listItem.textContent = pokemon.name + " — " + pokemon.type1;
+        } else {
+          listItem.textContent = pokemon.name + " — " + pokemon.type1 + " / " + pokemon.type2;
+        }
+
+        pokemonList.appendChild(listItem);
+      });
+
+      if (remainingTypes.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No types left.";
+        remainingList.appendChild(listItem);
+      }
+
+      if (combinations.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No combinations match the current filters.";
+        comboList.appendChild(listItem);
+      }
+
+      if (pokemonData.length > 0 && matchingPokemon.length === 0) {
+        const listItem = document.createElement("li");
+        listItem.textContent = "No Pokémon match the current filters.";
+        pokemonList.appendChild(listItem);
+      }
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+
+      pokemonData = [];
+
+      for (let i = 1; i < lines.length; i++) {
+        const columns = lines[i].split(",");
+
+        const name = columns[0] ? columns[0].trim() : "";
+        const type1 = columns[1] ? columns[1].trim() : "";
+        const type2 = columns[2] ? columns[2].trim() : "";
+
+        if (name !== "" && type1 !== "") {
+          pokemonData.push({
+            name: name,
+            type1: type1,
+            type2: type2
+          });
+        }
+      }
+
+      fileStatus.textContent = pokemonData.length + " Pokémon loaded.";
+      updateDisplay();
+    }
+
+    pokemonFile.addEventListener("change", function(event) {
+      const file = event.target.files[0];
+
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function(event) {
+        parseCSV(event.target.result);
+      };
+
+      reader.readAsText(file);
+    });
+
+    resetButton.addEventListener("click", function() {
+      eliminatedTypes.length = 0;
+      requiredTypes.length = 0;
+
+      refreshCheckboxes();
+      updateDisplay();
+    });
+
+    buildEliminateCheckboxes();
+    buildRequiredCheckboxes();
+    updateDisplay();
+  </script>
+</body>
+</html>
