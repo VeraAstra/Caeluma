@@ -255,6 +255,46 @@
       ...pokemonTypes
     ];
 
+    /*
+      Update these paths to match your actual icon folder/file names.
+
+      Example:
+      If your HTML file and icons folder are in the same directory:
+
+      pokemon-puzzle-helper.html
+      icons/
+        normal.png
+        fire.png
+        mono.png
+
+      then use:
+      "Normal": "icons/normal.png"
+
+      If your folder is named type-icons instead, use:
+      "Normal": "type-icons/normal.png"
+    */
+    const iconPaths = {
+      "Mono": "icons/mono.png",
+      "Normal": "icons/normal.png",
+      "Fire": "icons/fire.png",
+      "Water": "icons/water.png",
+      "Electric": "icons/electric.png",
+      "Grass": "icons/grass.png",
+      "Ice": "icons/ice.png",
+      "Fighting": "icons/fighting.png",
+      "Poison": "icons/poison.png",
+      "Ground": "icons/ground.png",
+      "Flying": "icons/flying.png",
+      "Psychic": "icons/psychic.png",
+      "Bug": "icons/bug.png",
+      "Rock": "icons/rock.png",
+      "Ghost": "icons/ghost.png",
+      "Dragon": "icons/dragon.png",
+      "Dark": "icons/dark.png",
+      "Steel": "icons/steel.png",
+      "Fairy": "icons/fairy.png"
+    };
+
     const excludedOptions = [];
     const requiredOptions = [];
 
@@ -354,7 +394,7 @@
     }
 
     function getIconPath(option) {
-      return "icons/" + option.toLowerCase().replace(" ", "-") + ".png";
+      return iconPaths[option];
     }
 
     function addToArray(array, value) {
