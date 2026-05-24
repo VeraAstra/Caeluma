@@ -60,11 +60,6 @@
       text-align: center;
     }
 
-    .type-table th:nth-child(2),
-    .type-table td:nth-child(2) {
-      text-align: left;
-    }
-
     .type-table th {
       color: #ffffff;
       background: #252525;
@@ -82,6 +77,22 @@
 
     .type-name {
       font-weight: bold;
+      text-align: center;
+    }
+
+    .type-display {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-width: 120px;
+    }
+
+    .type-icon {
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      flex-shrink: 0;
     }
 
     .eliminated-row .type-name {
@@ -162,6 +173,10 @@
       .type-table td {
         padding: 8px;
       }
+
+      .type-display {
+        min-width: 90px;
+      }
     }
   </style>
 </head>
@@ -174,7 +189,7 @@
       <h2>Type Filters</h2>
       <p class="small-note">
         Use Exclude for impossible types. Use Must Include for types the Pokémon definitely has.
-        Mono means the Pokémon may have only one type.
+        Mono can be selected if the Pokémon is single-type.
       </p>
 
       <table class="type-table">
@@ -235,8 +250,13 @@
       "Fairy"
     ];
 
-    const excludedTypes = [];
-    const requiredTypes = [];
+    const filterOptions = [
+      "Mono",
+      ...pokemonTypes
+    ];
+
+    const excludedOptions = [];
+    const requiredOptions = [];
 
     const typeTableBody = document.getElementById("typeTableBody");
     const comboList = document.getElementById("comboList");
@@ -251,37 +271,55 @@
     function buildTypeTable() {
       typeTableBody.innerHTML = "";
 
-      pokemonTypes.forEach(function(type) {
+      filterOptions.forEach(function(option) {
         const row = document.createElement("tr");
 
         const excludeCell = document.createElement("td");
         const excludeCheckbox = document.createElement("input");
         excludeCheckbox.type = "checkbox";
-        excludeCheckbox.value = type;
-        excludeCheckbox.dataset.type = type;
+        excludeCheckbox.value = option;
+        excludeCheckbox.dataset.type = option;
         excludeCheckbox.className = "exclude-checkbox";
 
         const typeCell = document.createElement("td");
-        typeCell.textContent = type;
         typeCell.className = "type-name";
+
+        const typeDisplay = document.createElement("span");
+        typeDisplay.className = "type-display";
+
+        const icon = document.createElement("img");
+        icon.className = "type-icon";
+        icon.src = getIconPath(option);
+        icon.alt = option + " icon";
+
+        icon.onerror = function() {
+          icon.style.display = "none";
+        };
+
+        const typeText = document.createElement("span");
+        typeText.textContent = option;
+
+        typeDisplay.appendChild(icon);
+        typeDisplay.appendChild(typeText);
+        typeCell.appendChild(typeDisplay);
 
         const requiredCell = document.createElement("td");
         const requiredCheckbox = document.createElement("input");
         requiredCheckbox.type = "checkbox";
-        requiredCheckbox.value = type;
-        requiredCheckbox.dataset.type = type;
+        requiredCheckbox.value = option;
+        requiredCheckbox.dataset.type = option;
         requiredCheckbox.className = "required-checkbox";
 
         excludeCheckbox.addEventListener("change", function() {
           if (excludeCheckbox.checked) {
-            addToArray(excludedTypes, type);
+            addToArray(excludedOptions, option);
             row.classList.add("eliminated-row");
 
             requiredCheckbox.checked = false;
-            removeFromArray(requiredTypes, type);
+            removeFromArray(requiredOptions, option);
             row.classList.remove("required-row");
           } else {
-            removeFromArray(excludedTypes, type);
+            removeFromArray(excludedOptions, option);
             row.classList.remove("eliminated-row");
           }
 
@@ -290,14 +328,14 @@
 
         requiredCheckbox.addEventListener("change", function() {
           if (requiredCheckbox.checked) {
-            addToArray(requiredTypes, type);
+            addToArray(requiredOptions, option);
             row.classList.add("required-row");
 
             excludeCheckbox.checked = false;
-            removeFromArray(excludedTypes, type);
+            removeFromArray(excludedOptions, option);
             row.classList.remove("eliminated-row");
           } else {
-            removeFromArray(requiredTypes, type);
+            removeFromArray(requiredOptions, option);
             row.classList.remove("required-row");
           }
 
@@ -315,6 +353,10 @@
       });
     }
 
+    function getIconPath(option) {
+      return "icons/" + option.toLowerCase().replace(" ", "-") + ".png";
+    }
+
     function addToArray(array, value) {
       if (!array.includes(value)) {
         array.push(value);
@@ -329,36 +371,62 @@
       }
     }
 
-    function getRemainingTypes() {
-      return pokemonTypes.filter(function(type) {
-        return !excludedTypes.includes(type);
+    function isExcluded(option) {
+      return excludedOptions.includes(option);
+    }
+
+    function isRequired(option) {
+      return requiredOptions.includes(option);
+    }
+
+    function getRemainingOptions() {
+      return filterOptions.filter(function(option) {
+        return !isExcluded(option);
       });
     }
 
-    function getTypeCombinations(remainingTypes) {
-      const combinations = [];
-
-      remainingTypes.forEach(function(type) {
-        const includesEveryRequiredType = requiredTypes.every(function(requiredType) {
-          return type === requiredType;
-        });
-
-        if (includesEveryRequiredType) {
-          combinations.push(type + " / Mono");
-        }
+    function getRemainingPokemonTypes() {
+      return pokemonTypes.filter(function(type) {
+        return !isExcluded(type);
       });
+    }
 
-      for (let i = 0; i < remainingTypes.length; i++) {
-        for (let j = i + 1; j < remainingTypes.length; j++) {
-          const firstType = remainingTypes[i];
-          const secondType = remainingTypes[j];
+    function getTypeCombinations() {
+      const combinations = [];
+      const remainingPokemonTypes = getRemainingPokemonTypes();
 
-          const includesEveryRequiredType = requiredTypes.every(function(requiredType) {
-            return firstType === requiredType || secondType === requiredType;
+      const monoIsExcluded = isExcluded("Mono");
+      const monoIsRequired = isRequired("Mono");
+
+      if (!monoIsExcluded) {
+        remainingPokemonTypes.forEach(function(type) {
+          const comboParts = [type, "Mono"];
+
+          const includesEveryRequiredOption = requiredOptions.every(function(requiredOption) {
+            return comboParts.includes(requiredOption);
           });
 
-          if (includesEveryRequiredType) {
-            combinations.push(firstType + " / " + secondType);
+          if (includesEveryRequiredOption) {
+            combinations.push(type + " / Mono");
+          }
+        });
+      }
+
+      if (!monoIsRequired) {
+        for (let i = 0; i < remainingPokemonTypes.length; i++) {
+          for (let j = i + 1; j < remainingPokemonTypes.length; j++) {
+            const firstType = remainingPokemonTypes[i];
+            const secondType = remainingPokemonTypes[j];
+
+            const comboParts = [firstType, secondType];
+
+            const includesEveryRequiredOption = requiredOptions.every(function(requiredOption) {
+              return comboParts.includes(requiredOption);
+            });
+
+            if (includesEveryRequiredOption) {
+              combinations.push(firstType + " / " + secondType);
+            }
           }
         }
       }
@@ -367,14 +435,14 @@
     }
 
     function updateDisplay() {
-      const remainingTypes = getRemainingTypes();
-      const combinations = getTypeCombinations(remainingTypes);
+      const remainingOptions = getRemainingOptions();
+      const combinations = getTypeCombinations();
 
       comboList.innerHTML = "";
       remainingList.innerHTML = "";
 
       comboCount.textContent = combinations.length + " option(s) possible";
-      remainingCount.textContent = remainingTypes.length + " type(s) remaining";
+      remainingCount.textContent = remainingOptions.length + " option(s) remaining";
 
       combinations.forEach(function(combo) {
         const listItem = document.createElement("li");
@@ -382,33 +450,27 @@
         comboList.appendChild(listItem);
       });
 
-      remainingTypes.forEach(function(type) {
+      remainingOptions.forEach(function(option) {
         const listItem = document.createElement("li");
-        listItem.textContent = type;
+        listItem.textContent = option;
         remainingList.appendChild(listItem);
       });
 
       if (combinations.length === 0) {
         const listItem = document.createElement("li");
-
-        if (requiredTypes.length > 2) {
-          listItem.textContent = "No options left. A Pokémon can only have up to two types.";
-        } else {
-          listItem.textContent = "No options left.";
-        }
-
+        listItem.textContent = "No options left.";
         comboList.appendChild(listItem);
       }
 
-      if (remainingTypes.length === 0) {
+      if (remainingOptions.length === 0) {
         const listItem = document.createElement("li");
-        listItem.textContent = "No types left.";
+        listItem.textContent = "No options left.";
         remainingList.appendChild(listItem);
       }
     }
 
     function resetExcluded() {
-      excludedTypes.length = 0;
+      excludedOptions.length = 0;
 
       const checkboxes = document.querySelectorAll(".exclude-checkbox");
 
@@ -421,7 +483,7 @@
     }
 
     function resetRequired() {
-      requiredTypes.length = 0;
+      requiredOptions.length = 0;
 
       const checkboxes = document.querySelectorAll(".required-checkbox");
 
